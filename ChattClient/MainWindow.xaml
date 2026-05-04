@@ -1,0 +1,51 @@
+<Window x:Class="ChattClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ChattApp - Klient"
+        Height="600"
+        Width="800"
+        WindowStartupLocation="CenterScreen"
+        Background="#F0F0F0">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- TODO: Implementera rubrik med status -->
+        <Border Grid.Row="0"
+                Background="#2C3E50"
+                Padding="15">
+            <!-- TODO: Lägg till TextBlock för ChattApp-titel och StatusText -->
+        </Border>
+
+        <!-- TODO: Implementera meddelandehistorik -->
+        <Border Grid.Row="1"
+                Margin="10"
+                Background="White"
+                BorderThickness="1"
+                BorderBrush="#BDC3C7">
+            <!-- TODO: Lägg till ScrollViewer med TextBlock för MessageHistory -->
+        </Border>
+
+        <!-- TODO: Implementera inputfält för meddelanden -->
+        <Border Grid.Row="2"
+                Padding="10"
+                Background="White"
+                BorderThickness="0,1,0,0"
+                BorderBrush="#BDC3C7">
+            <!-- TODO: Lägg till TextBox för MessageInput och Button för Send -->
+        </Border>
+
+        <!-- TODO: Implementera anslutningspanel -->
+        <Border Grid.Row="3"
+                Padding="10"
+                Background="#ECF0F1"
+                BorderThickness="0,1,0,0"
+                BorderBrush="#BDC3C7">
+            <!-- TODO: Lägg till TextBox för Server, Port, Username och Connect Button -->
+        </Border>
+    </Grid>
+</Window>
