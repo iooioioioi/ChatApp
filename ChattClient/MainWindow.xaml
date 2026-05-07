@@ -14,38 +14,80 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- TODO: Implementera rubrik med status -->
         <Border Grid.Row="0"
                 Background="#2C3E50"
                 Padding="15">
-            <!-- TODO: Lägg till TextBlock för ChattApp-titel och StatusText -->
+            <DockPanel>
+                <TextBlock Text="ChattApp"
+                           FontSize="20"
+                           Foreground="White"
+                           DockPanel.Dock="Left"/>
+                <TextBlock x:Name="StatusText"
+                           Text="✗ Frånkopplad"
+                           Foreground="LightCoral"
+                           FontSize="14"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"/>
+            </DockPanel>
         </Border>
 
-        <!-- TODO: Implementera meddelandehistorik -->
         <Border Grid.Row="1"
                 Margin="10"
                 Background="White"
                 BorderThickness="1"
                 BorderBrush="#BDC3C7">
-            <!-- TODO: Lägg till ScrollViewer med TextBlock för MessageHistory -->
+            <ScrollViewer x:Name="MessageScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          Padding="10">
+                <TextBlock x:Name="MessageHistory"
+                           TextWrapping="Wrap"/>
+            </ScrollViewer>
         </Border>
 
-        <!-- TODO: Implementera inputfält för meddelanden -->
         <Border Grid.Row="2"
                 Padding="10"
                 Background="White"
                 BorderThickness="0,1,0,0"
                 BorderBrush="#BDC3C7">
-            <!-- TODO: Lägg till TextBox för MessageInput och Button för Send -->
+            <DockPanel>
+                <TextBox x:Name="MessageInput"
+                         Height="30"
+                         Margin="0,0,10,0"
+                         VerticalAlignment="Center"/>
+                <Button x:Name="SendButton"
+                        Content="Skicka"
+                        Width="100"
+                        Click="SendButton_Click"/>
+            </DockPanel>
         </Border>
 
-        <!-- TODO: Implementera anslutningspanel -->
         <Border Grid.Row="3"
                 Padding="10"
                 Background="#ECF0F1"
                 BorderThickness="0,1,0,0"
                 BorderBrush="#BDC3C7">
-            <!-- TODO: Lägg till TextBox för Server, Port, Username och Connect Button -->
+            <StackPanel Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Left">
+                <TextBox x:Name="ServerInput"
+                         Width="150"
+                         Height="28"
+                         Text="127.0.0.1"
+                         Margin="0,0,10,0"/>
+                <TextBox x:Name="PortInput"
+                         Width="80"
+                         Height="28"
+                         Text="5000"
+                         Margin="0,0,10,0"/>
+                <TextBox x:Name="UsernameInput"
+                         Width="140"
+                         Height="28"
+                         Margin="0,0,10,0"/>
+                <Button x:Name="ConnectButton"
+                        Content="Anslut"
+                        Width="100"
+                        Click="ConnectButton_Click"/>
+            </StackPanel>
         </Border>
     </Grid>
 </Window>

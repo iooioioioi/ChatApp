@@ -1,24 +1,13 @@
 using System;
 using System.Windows;
+using System.Windows.Media;
 using ChattCommon;
 
 namespace ChattClient
 {
-    /// <summary>
-    /// TODO: Implementera MainWindow code-behind
-    /// WPF-fönstret för chatten.
-    /// Krav:
-    /// - Privat ServerConnection _connection
-    /// - Event handlers:
-    ///   - ConnectButton_Click()
-    ///   - SendButton_Click()
-    ///   - OnMessageReceived(Message message)
-    ///   - OnConnectionStatusChanged(string status)
-    /// - Metod: Window_Closed(object sender, EventArgs e)
-    /// </summary>
     public partial class MainWindow : Window
     {
-        private ServerConnection _connection;
+        private readonly ServerConnection _connection;
 
         public MainWindow()
         {
@@ -26,50 +15,87 @@ namespace ChattClient
             _connection = new ServerConnection();
             _connection.MessageReceived += OnMessageReceived;
             _connection.ConnectionStatusChanged += OnConnectionStatusChanged;
+            SetConnected(false);
         }
 
         private async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (_connection.IsConnected)
             {
-                // TODO: Implementera frånkoppling
+                _connection.Disconnect();
+                SetConnected(false);
                 return;
             }
 
-            string username = UsernameInput.Text.Trim();
-            if (string.IsNullOrEmpty(username))
+            var host = ServerInput.Text.Trim();
+            var portText = PortInput.Text.Trim();
+            var username = UsernameInput.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(portText) || string.IsNullOrWhiteSpace(username))
             {
-                MessageBox.Show("Ange ett användarnamn!", "Fel", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Fyll i server, port och användarnamn.", "Fel", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            // TODO: Hämta host och port, anslut
+
+            if (!int.TryParse(portText, out var port))
+            {
+                MessageBox.Show("Port måste vara ett tal.", "Fel", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            ConnectButton.IsEnabled = false;
+            ConnectButton.Content = "Ansluter...";
+
+            var success = await _connection.ConnectAsync(host, port, username);
+            SetConnected(success);
+            ConnectButton.IsEnabled = true;
         }
 
         private void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            string message = MessageInput.Text.Trim();
-            if (string.IsNullOrEmpty(message) || !_connection.IsConnected)
+            var message = MessageInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(message) || !_connection.IsConnected)
                 return;
 
-            // TODO: Implementera skickning
+            _connection.SendMessage(message);
+            MessageInput.Clear();
+            MessageInput.Focus();
         }
 
         private void OnMessageReceived(Message message)
         {
-            // TODO: Implementera UI-uppdatering
-            throw new NotImplementedException();
+            Dispatcher.Invoke(() =>
+            {
+                MessageHistory.Text += message + Environment.NewLine;
+                MessageScrollViewer.ScrollToEnd();
+            });
         }
 
         private void OnConnectionStatusChanged(string status)
         {
-            // TODO: Implementera status-uppdatering
-            throw new NotImplementedException();
+            Dispatcher.Invoke(() =>
+            {
+                StatusText.Text = status;
+                StatusText.Foreground = status.StartsWith("✓") ? Brushes.Green : Brushes.Red;
+            });
+        }
+
+        private void SetConnected(bool isConnected)
+        {
+            SendButton.IsEnabled = isConnected;
+            MessageInput.IsEnabled = isConnected;
+            ServerInput.IsEnabled = !isConnected;
+            PortInput.IsEnabled = !isConnected;
+            UsernameInput.IsEnabled = !isConnected;
+            ConnectButton.Content = isConnected ? "Koppla från" : "Anslut";
+            if (!isConnected)
+                StatusText.Text = "✗ Frånkopplad";
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            // TODO: Implementera
-            throw new NotImplementedException();
+            if (_connection.IsConnected)
+                _connection.Disconnect();
         }
     }
 }

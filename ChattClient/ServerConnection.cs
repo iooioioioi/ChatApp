@@ -2,28 +2,11 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ChattCommon;
 
 namespace ChattClient
 {
-    /// <summary>
-    /// TODO: Implementera ServerConnection-klassen
-    /// Hanterar anslutningen och kommunikationen med servern från klientsidan.
-    /// Krav:
-    /// - Privat TcpClient _client
-    /// - Privat NetworkStream _stream
-    /// - Privat StreamReader _reader
-    /// - Privat StreamWriter _writer
-    /// - Public event Action<Message> MessageReceived
-    /// - Public event Action<string> ConnectionStatusChanged
-    /// - Public property bool IsConnected
-    /// - Metod: Task<bool> ConnectAsync(string host, int port, string username)
-    /// - Metod: Task ReceiveMessagesAsync() - läser meddelanden i bakgrunden
-    /// - Metod: void SendMessage(string content)
-    /// - Metod: void Disconnect()
-    /// </summary>
     public class ServerConnection
     {
         private TcpClient _client;
@@ -31,8 +14,7 @@ namespace ChattClient
         private StreamReader _reader;
         private StreamWriter _writer;
         private readonly Logger _logger;
-        private string _username;
-        private bool _isRunning = false;
+        private bool _isRunning;
 
         public bool IsConnected { get; private set; }
         public event Action<Message> MessageReceived;
@@ -47,38 +29,96 @@ namespace ChattClient
         {
             try
             {
-                _username = username;
                 _client = new TcpClient();
+                var connectTask = _client.ConnectAsync(host, port);
+                if (await Task.WhenAny(connectTask, Task.Delay(5000)) != connectTask)
+                {
+                    throw new TimeoutException("Timeout vid anslutning");
+                }
 
-                // TODO: Anslut med timeout
-                // TODO: Initiera streams
-                // TODO: Skicka användarnamn
-                throw new NotImplementedException();
+                _stream = _client.GetStream();
+                _reader = new StreamReader(_stream, Encoding.UTF8);
+                _writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
+
+                _writer.WriteLine(username);
+                _isRunning = true;
+                IsConnected = true;
+                _logger.Log($"Ansluten som {username}");
+                ConnectionStatusChanged?.Invoke($"✓ Ansluten som {username}");
+
+                _ = Task.Run(ReceiveMessagesAsync);
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError("Anslutningsfel", ex);
                 ConnectionStatusChanged?.Invoke($"✗ Anslutningsfel: {ex.Message}");
+                IsConnected = false;
                 return false;
             }
         }
 
         private async Task ReceiveMessagesAsync()
         {
-            // TODO: Implementera
-            throw new NotImplementedException();
+            try
+            {
+                while (_isRunning && _client?.Connected == true)
+                {
+                    var line = await _reader.ReadLineAsync();
+                    if (line == null)
+                        break;
+
+                    var message = Message.Deserialize(line);
+                    MessageReceived?.Invoke(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Mottagningsfel", ex);
+            }
+            finally
+            {
+                Disconnect();
+            }
         }
 
         public void SendMessage(string content)
         {
-            // TODO: Implementera
-            throw new NotImplementedException();
+            if (!IsConnected || string.IsNullOrWhiteSpace(content))
+                return;
+
+            try
+            {
+                _writer.WriteLine(content);
+                _logger.Log($"Skickade: {content}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Fel vid skickning", ex);
+            }
         }
 
         public void Disconnect()
         {
-            // TODO: Implementera
-            throw new NotImplementedException();
+            if (!IsConnected)
+                return;
+
+            _isRunning = false;
+            IsConnected = false;
+
+            try
+            {
+                _writer?.Close();
+                _reader?.Close();
+                _stream?.Close();
+                _client?.Close();
+            }
+            catch
+            {
+            }
+
+            ConnectionStatusChanged?.Invoke("✗ Frånkopplad");
+            _logger.Log("Frånkopplad från server");
         }
     }
 }
