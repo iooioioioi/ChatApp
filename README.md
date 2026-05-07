@@ -40,7 +40,7 @@ Se `docs/` för:
 
 ## Lärandemål
 
-Jag kommer att jobba på och lära dig:
+Jag kommer att jobba på och undertiden fördjupa min kunskap om följande :
 - OOP (klasser, properties, metoder)
 - Arv och polymorfism
 - Nätverkskommunikation (TCP/Sockets)
