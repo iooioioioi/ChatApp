@@ -32,6 +32,8 @@ namespace ChattClient
             _logger = new Logger("client.log");
         }
 
+        public string Username => _username;
+
         /// <summary>
         /// Ansluter till servern.
         /// </summary>
@@ -102,7 +104,7 @@ namespace ChattClient
         }
 
         /// <summary>
-        /// Skickar ett meddelande till servern.
+        /// Skickar ett textmeddelande till servern.
         /// </summary>
         public void SendMessage(string content)
         {
@@ -110,13 +112,34 @@ namespace ChattClient
             {
                 if (_writer != null && _client?.Connected == true)
                 {
-                    _writer.WriteLine(content);
+                    var message = new Message(_username, content);
+                    _writer.WriteLine(message.Serialize());
                     _logger.Log($"Meddelande skickat: {content}");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError("Fel vid skickning", ex);
+            }
+        }
+
+        /// <summary>
+        /// Skickar en bild till servern.
+        /// </summary>
+        public void SendImage(string imageName, string imageData)
+        {
+            try
+            {
+                if (_writer != null && _client?.Connected == true)
+                {
+                    var message = new Message(_username, $"[Bild: {imageName}]", imageName, imageData);
+                    _writer.WriteLine(message.Serialize());
+                    _logger.Log($"Bild skickad: {imageName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Fel vid bildskick", ex);
             }
         }
 

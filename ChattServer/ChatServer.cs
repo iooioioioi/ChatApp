@@ -94,8 +94,11 @@ namespace ChattServer
                     if (string.IsNullOrWhiteSpace(message))
                         continue;
 
-                    // Skapa ett Message-objekt
-                    var chatMessage = new Message(user.Username, message);
+                    var incoming = Message.Deserialize(message);
+                    var chatMessage = new Message(user.Username, incoming.Content, incoming.ImageName, incoming.ImageData)
+                    {
+                        Timestamp = incoming.Timestamp
+                    };
                     _logger.Log(chatMessage.ToString());
 
                     // Skicka till alla klienter

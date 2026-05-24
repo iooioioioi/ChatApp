@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 
 namespace ChattCommon
 {
@@ -10,44 +11,58 @@ namespace ChattCommon
         public string Sender { get; set; }
         public string Content { get; set; }
         public DateTime Timestamp { get; set; }
+        public string ImageName { get; set; }
+        public string ImageData { get; set; }
+
+        public bool HasImage => !string.IsNullOrWhiteSpace(ImageData);
+
+        public Message()
+        {
+            Sender = "System";
+            Content = string.Empty;
+            Timestamp = DateTime.Now;
+        }
 
         public Message(string sender, string content)
         {
             Sender = sender ?? "Unknown";
-            Content = content ?? "";
+            Content = content ?? string.Empty;
             Timestamp = DateTime.Now;
+        }
+
+        public Message(string sender, string content, string imageName, string imageData)
+            : this(sender, content)
+        {
+            ImageName = imageName;
+            ImageData = imageData;
         }
 
         public override string ToString()
         {
-            return $"[{Timestamp:HH:mm:ss}] {Sender}: {Content}";
+            var text = $"[{Timestamp:HH:mm:ss}] {Sender}: {Content}";
+            if (HasImage)
+            {
+                text += $" [Bild: {ImageName}]";
+            }
+            return text;
         }
 
-        /// <summary>
-        /// Konverterar meddelandet till ett format som kan skickas över nätverket.
-        /// Format: SENDER|CONTENT|TIMESTAMP
-        /// </summary>
         public string Serialize()
         {
-            return $"{Sender}|{Content}|{Timestamp:yyyy-MM-dd HH:mm:ss}";
+            return JsonSerializer.Serialize(this);
         }
 
-        /// <summary>
-        /// Skapar ett Message-objekt från ett serialiserat strängformat.
-        /// </summary>
         public static Message Deserialize(string data)
         {
-            var parts = data.Split('|');
-            if (parts.Length >= 3)
+            try
             {
-                var message = new Message(parts[0], parts[1]);
-                if (DateTime.TryParse(parts[2], out var timestamp))
-                {
-                    message.Timestamp = timestamp;
-                }
-                return message;
+                var message = JsonSerializer.Deserialize<Message>(data);
+                return message ?? new Message("System", data);
             }
-            return new Message("System", data);
+            catch
+            {
+                return new Message("System", data);
+            }
         }
     }
 }
