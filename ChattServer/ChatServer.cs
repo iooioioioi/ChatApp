@@ -21,6 +21,7 @@ namespace ChattServer
             _logger = new Logger("server.log");
         }
 
+        // startar servern och väntar på klienter
         public void Start()
         {
             try
@@ -46,6 +47,8 @@ namespace ChattServer
             }
         }
 
+        // hanterar allt som händer för en enskild ansluten klient
+        // hanterar en ansluten klient i sin egen tråd
         private void HandleClient(TcpClient client)
         {
             ClientConnection connection = null;
@@ -67,7 +70,9 @@ namespace ChattServer
                     if (string.IsNullOrWhiteSpace(text))
                         continue;
 
-                    var message = new Message(user.Username, text);
+                    var message = Message.Deserialize(text);
+                    message.Sender = user.Username;
+                    message.Timestamp = DateTime.Now;
                     _logger.Log(message.ToString());
                     BroadcastMessage(message);
                 }
@@ -93,6 +98,7 @@ namespace ChattServer
             }
         }
 
+        // skickar meddelandet till alla anslutna klienter
         private void BroadcastMessage(Message message)
         {
             lock (_lockObj)
@@ -105,7 +111,8 @@ namespace ChattServer
                     }
                     catch
                     {
-                        // ignore, klienten tas bort vid nästa felhantering
+                        client.Close();
+                        _clients.Remove(client);
                     }
                 }
             }

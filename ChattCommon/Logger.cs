@@ -13,6 +13,7 @@ namespace ChattCommon
             Directory.CreateDirectory("logs");
         }
 
+        // skriver en rad i loggfilen
         public void Log(string message)
         {
             try
@@ -26,6 +27,7 @@ namespace ChattCommon
             }
         }
 
+        // skriver ett felmeddelande till loggen
         public void LogError(string message, Exception ex = null)
         {
             var text = $"ERROR: {message}";

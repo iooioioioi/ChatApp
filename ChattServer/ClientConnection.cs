@@ -15,6 +15,8 @@ namespace ChattServer
 
         public User User { get; private set; }
 
+        // läser in användarnamnet som klienten skickar direkt efter anslutning
+        // läser användarnamnet som klienten skickar när den ansluter
         public ClientConnection(TcpClient tcpClient, int clientId)
         {
             _tcpClient = tcpClient;
@@ -26,6 +28,8 @@ namespace ChattServer
             User = new User(string.IsNullOrWhiteSpace(username) ? $"User{clientId}" : username, clientId);
         }
 
+        // läser ett meddelande från klienten
+        // läser ett meddelande från klienten
         public string ReadMessage()
         {
             try
@@ -38,6 +42,7 @@ namespace ChattServer
             }
         }
 
+        // skickar ett serialiserat meddelande till klienten
         public void SendMessage(Message message)
         {
             if (message == null)
@@ -53,6 +58,7 @@ namespace ChattServer
             }
         }
 
+        // stänger alla nätverksresurser för klienten
         public void Close()
         {
             try

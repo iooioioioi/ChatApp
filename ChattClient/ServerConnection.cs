@@ -15,6 +15,7 @@ namespace ChattClient
         private StreamWriter _writer;
         private readonly Logger _logger;
         private bool _isRunning;
+        private string _username;
 
         public bool IsConnected { get; private set; }
         public event Action<Message> MessageReceived;
@@ -25,10 +26,12 @@ namespace ChattClient
             _logger = new Logger("client.log");
         }
 
+        // ansluter till servern och skickar användarnamnet direkt
         public async Task<bool> ConnectAsync(string host, int port, string username)
         {
             try
             {
+                _username = username;
                 _client = new TcpClient();
                 var connectTask = _client.ConnectAsync(host, port);
                 if (await Task.WhenAny(connectTask, Task.Delay(5000)) != connectTask)
@@ -58,6 +61,7 @@ namespace ChattClient
             }
         }
 
+        // tar emot meddelanden från servern i bakgrunden
         private async Task ReceiveMessagesAsync()
         {
             try
@@ -82,6 +86,7 @@ namespace ChattClient
             }
         }
 
+        // skickar ett meddelande till servern
         public void SendMessage(string content)
         {
             if (!IsConnected || string.IsNullOrWhiteSpace(content))
@@ -89,7 +94,8 @@ namespace ChattClient
 
             try
             {
-                _writer.WriteLine(content);
+                var message = new Message(_username, content);
+                _writer.WriteLine(message.Serialize());
                 _logger.Log($"Skickade: {content}");
             }
             catch (Exception ex)
@@ -98,6 +104,24 @@ namespace ChattClient
             }
         }
 
+        public void SendImage(string imageName, string imageData)
+        {
+            if (!IsConnected || string.IsNullOrWhiteSpace(imageName) || string.IsNullOrWhiteSpace(imageData))
+                return;
+
+            try
+            {
+                var message = new Message(_username, $"[Bild: {imageName}]", imageName, imageData);
+                _writer.WriteLine(message.Serialize());
+                _logger.Log($"Skickade bild: {imageName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Fel vid bildöverföring", ex);
+            }
+        }
+
+        // stänger av anslutningen och nätverksströmmen
         public void Disconnect()
         {
             if (!IsConnected)

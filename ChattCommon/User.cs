@@ -2,14 +2,6 @@ using System;
 
 namespace ChattCommon
 {
-    /// <summary>
-    /// TODO: Implementera User-klassen
-    /// Ska representera en användare i chatsystemet.
-    /// Krav:
-    /// - Properties: Username (string), Id (int), ConnectedTime (DateTime)
-    /// - Konstruktor: User(string username, int id)
-    /// - Metod: ToString() - formaterad visning
-    /// </summary>
     public class User
     {
         public string Username { get; set; }
@@ -18,7 +10,7 @@ namespace ChattCommon
 
         public User(string username, int id)
         {
-            Username = username ?? "Anonymous";
+            Username = string.IsNullOrWhiteSpace(username) ? "Anonymous" : username;
             Id = id;
             ConnectedTime = DateTime.Now;
         }

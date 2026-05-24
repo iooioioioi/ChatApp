@@ -1,36 +1,41 @@
 # IMPLEMENTATION GUIDE - ChattApp
 
-Denna guide visar hur jag kommer att impementera / bygga upp min ChattApp steg för steg.
+Denna guide beskriver hur projektet är uppbyggt och vilka funktioner som finns i det färdiga systemet.
 
 ## Fas 1: ChattCommon (Klassmodell)
 
 ### 1.1 Message-klassen
-**Syfte**: Representera ett meddelande i chatsystemet
+**Syfte**: Representera ett meddelande i chatsystemet.
 
 **Properties som krävs**:
 ```csharp
 public string Sender { get; set; }
 public string Content { get; set; }
+public string ImageName { get; set; }
+public string ImageData { get; set; }
 public DateTime Timestamp { get; set; }
+public bool HasImage => !string.IsNullOrWhiteSpace(ImageData);
 ```
 
 **Konstruktor**:
 ```csharp
-public Message(string sender, string content)
+public Message(string sender, string content, string imageName = null, string imageData = null)
 {
-    Sender = sender ?? "Unknown";
-    Content = content ?? "";
+    Sender = string.IsNullOrWhiteSpace(sender) ? "Unknown" : sender;
+    Content = content ?? string.Empty;
+    ImageName = imageName ?? string.Empty;
+    ImageData = imageData ?? string.Empty;
     Timestamp = DateTime.Now;
 }
 ```
 
 **Metoder**:
-- `ToString()` - Format: `[10:30:45] Alice: Hej världen`
-- `Serialize()` - Format: `Alice|Hej världen|2024-04-28 10:30:45`
-- `Deserialize(string data)` - Statisk metod som skapar Message från serialiserat format
+- `ToString()` - Format: `[10:30:45] Alice: Hej världen` och lägger till `[BILD: filnamn]` om bild finns.
+- `Serialize()` - Serialiserar hela objektet med fält för text och bild.
+- `Deserialize(string data)` - Skapar `Message` från nätverksdata.
 
 ### 1.2 User-klassen
-**Syfte**: Representera en användare
+**Syfte**: Representera en användare.
 
 **Properties**:
 ```csharp
@@ -39,7 +44,7 @@ public int Id { get; set; }
 public DateTime ConnectedTime { get; set; }
 ```
 
-**Konstruktor**: 
+**Konstruktor**:
 ```csharp
 public User(string username, int id)
 {
@@ -50,7 +55,7 @@ public User(string username, int id)
 ```
 
 ### 1.3 Logger-klassen
-**Syfte**: Centraliserad loggning
+**Syfte**: Centraliserad loggning för server och klient.
 
 **Privat field**:
 ```csharp
@@ -58,20 +63,20 @@ private readonly string _logPath;
 ```
 
 **Konstruktor**:
-- Ta `logFileName` parameter (default "chatt.log")
-- Sätt `_logPath = Path.Combine("logs", logFileName)`
-- Skapa logs-mappen: `Directory.CreateDirectory("logs")`
+- Tar `logFileName` som parameter.
+- Skapar mappen `logs` om den saknas.
+- Sparar logg till fil.
 
 **Metoder**:
-- `Log(string message)` - Skriver med tidsstämpel
-- `LogError(string message, Exception ex = null)` - Skriver fel
+- `Log(string message)` - Skriver tidsstämplat meddelande.
+- `LogError(string message, Exception ex = null)` - Skriver felinformation.
 
 ---
 
 ## Fas 2: ChattServer (Servern)
 
 ### 2.1 ChatServer-klassen
-**Syfte**: TCP-server som hanterar många klienter
+**Syfte**: TCP-server som tar emot flera klienter och skickar vidare meddelanden.
 
 **Privata fields**:
 ```csharp
@@ -92,27 +97,27 @@ public ChatServer()
 ```
 
 **Start() metod**:
-1. Skapa TcpListener på localhost:5000
-2. Starta lyssnandet
-3. Logga "SERVER STARTAD"
-4. Loop som accepterar TcpClient
-5. För varje client, starta ny Thread som kallar HandleClient()
+1. Starta TcpListener på port 5000.
+2. Logga att servern startar.
+3. Acceptera klienter i en loop.
+4. Starta en ny tråd för varje ansluten klient.
 
 **HandleClient() metod** (körs i egen tråd):
-1. Skapa ny ClientConnection
-2. Lägg till i _clients (med lock för thread-safety)
-3. Lägg meddelande i log
-4. Loop som läser meddelanden från klienten
-5. Broadcast varje meddelande till alla
-6. Vid disconnect: ta bort från lista och notifiera andra
+1. Skapa `ClientConnection` för klienten.
+2. Lägg till klienten i listan under lås.
+3. Broadcasta att användaren anslutit.
+4. Läs varje inkommande rad och `Deserialize` till `Message`.
+5. Sätt rätt avsändare och tid.
+6. Skicka vidare meddelandet till alla andra.
+7. Vid disconnect: ta bort klient och notify andra.
 
 **BroadcastMessage() metod**:
-1. För varje ClientConnection i _clients (med lock)
-2. Anrop SendMessage() på varje client
-3. Fånga exceptions för frånkopplade klienter
+1. Iterera över alla anslutna klienter.
+2. Skicka meddelandet till varje klient.
+3. Ta bort klienter som inte längre svarar.
 
 ### 2.2 ClientConnection-klassen
-**Syfte**: Representerar en enskild klientanslutning på servern
+**Syfte**: Representerar en anslutning från en klient.
 
 **Privata fields**:
 ```csharp
@@ -124,29 +129,26 @@ public User User { get; private set; }
 ```
 
 **Konstruktor**:
-1. Spara _tcpClient
-2. Hämta NetworkStream
-3. Skapa StreamReader och StreamWriter med UTF-8
-4. Läs användarnamn från första raden
-5. Skapa User-objekt
+1. Initiera nätverksströmmar.
+2. Läs användarnamn från klienten.
+3. Skapa `User`-objekt.
 
 **ReadMessage()**:
-- Returnerar `_reader.ReadLine()`
-- Returnerar null om felkod
+- Läser en rad från klienten.
+- Returnerar `null` vid fel.
 
 **SendMessage()**:
-- Konvertera Message.Serialize()
-- Skriv via StreamWriter
+- Skriver serialiserat `Message` till klienten.
 
 **Close()**:
-- Stäng reader, writer, stream, client
+- Stänger alla resurser.
 
 ---
 
 ## Fas 3: ChattClient (Klienten)
 
 ### 3.1 ServerConnection-klassen
-**Syfte**: Hanterar kommunikation med servern från klienten
+**Syfte**: Hantera anslutning, mottagning och sändning med servern.
 
 **Privata fields**:
 ```csharp
@@ -156,7 +158,7 @@ private StreamReader _reader;
 private StreamWriter _writer;
 private readonly Logger _logger;
 private string _username;
-private bool _isRunning = false;
+private bool _isRunning;
 ```
 
 **Events**:
@@ -165,98 +167,96 @@ public event Action<Message> MessageReceived;
 public event Action<string> ConnectionStatusChanged;
 ```
 
-**Property**:
-```csharp
-public bool IsConnected => _client?.Connected == true;
-```
-
 **ConnectAsync()**:
-1. Validera input
-2. Skapa TcpClient
-3. Anslut med timeout (5 sekunder)
-4. Skapa reader/writer
-5. Skicka användarnamn
-6. Sätt _isRunning = true
-7. Starta ReceiveMessagesAsync() i bakgrunden
+1. Sätt användarnamn.
+2. Anslut till servern med timeout.
+3. Initiera reader och writer.
+4. Skicka användarnamn första raden.
+5. Starta bakgrundstråd för mottagning.
 
 **ReceiveMessagesAsync()**:
-1. Loop medan _isRunning
-2. Läs meddelanden från servern
-3. Deserialize och anrop MessageReceived event
-4. Vid error: anrop Disconnect()
+1. Läs rader från servern.
+2. `Deserialize` till `Message`.
+3. Anropa `MessageReceived`.
+4. Vid fel: `Disconnect()`.
 
 **SendMessage()**:
-1. Validera att _client.Connected
-2. Skriv meddelande via StreamWriter
+1. Skapa `Message` med text.
+2. Skicka serialiserat meddelande.
+
+**SendImage()**:
+1. Skapa `Message` med `ImageName` och `ImageData`.
+2. Skicka bilddata som Base64.
 
 **Disconnect()**:
-1. Sätt _isRunning = false
-2. Stäng alla connections
-3. Anrop ConnectionStatusChanged event
+1. Stäng alla nätverksresurser.
+2. Anropa status-event.
 
 ### 3.2 MainWindow XAML
 **Layout**:
-- Row 0: Rubrik med ChattApp-title och status (grön/röd)
-- Row 1: ScrollViewer med TextBlock för meddelandehistorik
-- Row 2: TextBox för input + Send-button
-- Row 3: Settings (Server, Port, Username) + Connect-button
+- Överst: rubrik och anslutningsstatus.
+- Mitten: ScrollViewer med `MessagePanel`.
+- Nederst: knapp för bilduppladdning, textfält, skicka-knapp.
+- Längst ner: inloggningsfält för användarnamn och anslut.
 
 ### 3.3 MainWindow Code-Behind
 **Fields**:
 ```csharp
-private ServerConnection _connection;
+private readonly ServerConnection _connection;
 ```
 
 **Constructor**:
-1. InitializeComponent()
-2. Skapa ServerConnection
-3. Koppla events: MessageReceived, ConnectionStatusChanged
+1. Initiera komponenter.
+2. Skapa `ServerConnection`.
+3. Prenumerera på events från servern.
 
 **ConnectButton_Click()**:
-1. Om redan ansluten: Disconnect()
-2. Validera input
-3. Anrop ConnectAsync()
-4. Uppdatera UI (enable/disable fields)
+1. Validera användarnamn.
+2. Anslut till `127.0.0.1:5000`.
+3. Visa anslutningsstatus.
 
 **SendButton_Click()**:
-1. Hämta text från TextBox
-2. Validera input
-3. Anrop SendMessage()
-4. Rensa TextBox
+1. Hämta text från `MessageInput`.
+2. Skicka via `SendMessage()`.
+3. Rensa textfältet.
+
+**MessageInput_KeyDown()**:
+1. Tryck Enter skickar meddelandet ockå.
+
+**ImageButton_Click()**:
+1. Öppna filväljare.
+2. Läs bilden som byte-array.
+3. Skicka Base64-data till servern.
 
 **OnMessageReceived()**:
-1. Använd Dispatcher.Invoke() för UI-uppdateringar
-2. Lägg till meddelande i MessageHistory TextBlock
-
-**OnConnectionStatusChanged()**:
-1. Uppdatera StatusText
-2. Sätt färg (grön = ansluten, röd = frånkopplad)
-3. Enable/disable controls
+1. Bygger upp chattbubblor i `MessagePanel`.
+2. Visar text och bild vid behov.
 
 ---
 
 ## Testning
 
-1. **Starta servern** 
+1. **Starta servern**
    ```bash
    dotnet run --project ChattServer
    ```
 
-2. **Starta två klienter**
+2. **Starta klienten**
    ```bash
    dotnet run --project ChattClient
    ```
 
-3. **Testa grundfunktion**:
-   - Anslut första klient som "Alice"
-   - Anslut andra klient som "Bob"
-   - Skicka meddelande från Alice
-   - Verifiera att Bob ser det
+3. **Testa funktioner**:
+   - Anslut med användarnamn.
+   - Skicka text med Enter eller knappen Skicka.
+   - Ladda upp en bild.
+   - Bekräfta att bilden visas i chatthistoriken.
 
-4. **Testa felhantering**:
-   - Felaktig port
-   - Inget användarnamn
-   - Frånkoppling
+4. **Verifiera serverkrav**:
+   - Ta emot klientanslutningar.
+   - Hantera flera användare.
+   - Skicka vidare text och bildmeddelanden.
+   - Logga information till fil.
 
 ---
 

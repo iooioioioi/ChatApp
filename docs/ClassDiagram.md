@@ -1,34 +1,37 @@
 # Klassdiagram för ChattAppen
-# Med Hjälp ifrån ChatGPT
 
 ## Arkitektur
 
 ```
-                  ┌─────────────────────────────────┐
-                  │    ChattCommon (Shared)          │
-                  ├─────────────────────────────────┤
-                  │ • Message                  │
-                  │ • User                     │
-                  │ • Logger                   │
-                  └─────────────────────────────────┘
-                          △                △
-                          │                │
-                  ┌───────┴───────┐    ┌───┴───────────┐
-                  │               │    │               │
-          ┌───────▼──────────┐  ┌─▼───────────────┐
-          │  ChattServer     │  │  ChattClient    │
-          ├──────────────────┤  ├─────────────────┤
-          │ • ChatServer     │  │ • MainWindow    │
-          │ • ClientConn     │  │ • ServerConn    │
-          └──────────────────┘  └─────────────────┘
+                  ┌─────────────────────────────────────────┐
+                  │              ChattCommon                 │
+                  ├─────────────────────────────────────────┤
+                  │ • Message                                │
+                  │ • User                                   │
+                  │ • Logger                                 │
+                  └─────────────────────────────────────────┘
+                           △                 △
+                           │                 │
+                  ┌────────┴────────┐  ┌───────────────┴─────────────┐
+                  │    ChattServer   │  │          ChattClient        │
+                  ├──────────────────┤  ├─────────────────────────────┤
+                  │ • ChatServer     │  │ • MainWindow                │
+                  │ • ClientConnection│  │ • ServerConnection          │
+                  └──────────────────┘  └─────────────────────────────┘
 ```
 
 ## Klassrelationer
 
 ```
 ChattCommon::Message
+├── Sender: string
+├── Content: string
+├── ImageName: string
+├── ImageData: string
+├── Timestamp: DateTime
+├── HasImage: bool
 ├── Serialize() -> string
-├── Deserialize() -> Message
+├── Deserialize(string) -> Message
 └── ToString() -> string
 
 ChattCommon::User
@@ -41,6 +44,7 @@ ChattCommon::Logger
 └── LogError(string, Exception)
 
 ChattServer::ChatServer
+├── _listener: TcpListener
 ├── _clients: List<ClientConnection>
 ├── Start()
 ├── HandleClient(TcpClient)
@@ -56,21 +60,34 @@ ChattServer::ClientConnection
 ChattClient::ServerConnection
 ├── _client: TcpClient
 ├── MessageReceived: event
-├── ConnectAsync()
+├── ConnectionStatusChanged: event
+├── ConnectAsync(string, int, string)
 ├── SendMessage(string)
+├── SendImage(string, string)
 └── Disconnect()
 
 ChattClient::MainWindow
 ├── _connection: ServerConnection
 ├── ConnectButton_Click()
 ├── SendButton_Click()
-└── OnMessageReceived()
+├── ImageButton_Click()
+├── MessageInput_KeyDown()
+├── OnMessageReceived()
+└── DisplayMessage(Message)
 ```
+
+## Funktioner
+
+- Servern tar emot flera klientanslutningar samtidigt.
+- Servern tar emot och skickar vidare meddelanden i realtid.
+- Klienten ansluter till servern med användarnamn.
+- Klienten kan skicka textmeddelanden med Enter eller knappen Skicka.
+- Klienten kan ladda upp bilder och visa dem i chattflödet.
+- All trafik loggas till fil i både server och klient.
 
 ## Designmönster
 
-1. **Observer Pattern**: Events används för meddelandemottagning
-2. **Threading**: Varje klient körs i egen tråd
-3. **Dependency Injection**: Logger passeras till konstruktorer
-4. **Async/Await**: Non-blocking UI
-5. **Komposition**: Preferences framför arv
+1. **Observer Pattern**: `MessageReceived` och `ConnectionStatusChanged` används för UI-uppdateringar.
+2. **Konkurrens**: Servern hanterar varje klient i sin egen tråd.
+3. **Async/Await**: Klienten tar emot meddelanden utan att blockera UI.
+4. **Komposition**: Klient och server använder delade modeller från `ChattCommon`.
