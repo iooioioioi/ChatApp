@@ -167,7 +167,7 @@ namespace ChattClient
                     Background = new SolidColorBrush(Color.FromRgb(54, 57, 63)),
                     CornerRadius = new CornerRadius(14),
                     Padding = new Thickness(14),
-                    MaxWidth = 880
+                    //MaxWidth = 880
                 };
 
                 var bubbleStack = new System.Windows.Controls.StackPanel();
